@@ -13,10 +13,7 @@ License: GPL2
 
 <?php
 
-
-                global $wpdb;
-              
-
+global $wpdb;
 $forums = $wpdb->get_results("select * from wp_posts where post_type = 'forum'");
 
 function get_category_from_post($post_id){
@@ -25,8 +22,22 @@ function get_category_from_post($post_id){
 }
 function get_forum_from_category($category){
     $options = get_option('bbp_sync_idx');
-    //TODO parse string and check for forum.
-    //return null if none is found.
+    $parts = explode('|', $options);
+    $categoryForums = array();
+    foreach ($parts as $p) {
+        $kv = explode(':', $p);
+        $k = $kv[0];
+        $v = $kv[1];
+        $categoryForums[$k] = $v;
+    }
+
+    foreach ($categoryForums as $cId => $fId) {
+        if($cId == $category->term_id){
+            return $fId;
+        }
+    }
+    
+    return null;
 }
 
 /* TODO: load options and post ackording to setup  IF there is any! */
@@ -104,13 +115,38 @@ function my_plugin_options() {
         </p>
     	<form method="post" action="options.php">
             <?php
-                settings_fields("_bbsync_options");
-                do_settings_fields("_bbsync_options");    
+                settings_fields("_bbsync_options", 'bbp_sync_idx');
+                do_settings_fields("_bbsync_options", 'bbp_sync_idx');    
             ?>
             <input type="text" id="bbp_sync_idx" name="bbp_sync_idx" value="<?php echo get_option('bbp_sync_idx'); ?>" />
-    		<br />
+    		<br /><br />
             <input type="submit" class="button-primary" onsubmit="return update()" value="<?php _e('Save Changes') ?>" />
     	</form>
+
+        <div style="">
+            <h4>Kategorier</h4>
+            <ul>
+                <?php
+                    $categories = get_categories();
+                    foreach ($categories as $cat) {
+                        echo '<li>' . $cat->name . ' : ' . $cat->term_id . '</li>';
+                    }
+                ?>
+            </ul>
+        </div>
+
+        <div style="">
+            <h4>Forum</h4>
+            <ul>
+                <?php
+                    global $wpdb;
+                    $forums = $wpdb->get_results('select * from wp_posts where post_type = "forum"');
+                    foreach ($forums as $f) {
+                        echo '<li>' . $f->post_title . ' : ' . $f->ID . '</li>';
+                    }
+                ?>
+            </ul>
+        </div>
     </div>
 
     <?php
